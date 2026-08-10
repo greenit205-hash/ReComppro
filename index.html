@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RecompPro</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1520">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root{
+    --bg:#0d1520; --bg2:#111c2b; --card:#16212e; --card2:#182634;
+    --accent:#22c99a; --accent-dim:#1a9c78; --text:#eef3f6; --text-dim:#9fb0c0;
+    --border:#243244; --danger:#e15c5c; --input-bg:#0b131e;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); padding-bottom:calc(100px + env(safe-area-inset-bottom));}
+  header{display:flex; align-items:center; justify-content:space-between; padding:18px 18px 14px; border-bottom:1px solid var(--border); background:var(--bg);}
+  .brand{display:flex; align-items:center; gap:10px; font-weight:800; font-size:19px; letter-spacing:.2px;}
+  .brand .logo{width:38px; height:38px; border-radius:11px; background:linear-gradient(135deg,var(--accent),var(--accent-dim)); display:flex; align-items:center; justify-content:center; font-size:18px;}
+  .brand .pro{color:var(--accent);}
+  .date-pill{font-size:13px; color:var(--text-dim); background:var(--card2); padding:6px 12px; border-radius:20px; border:1px solid var(--border);}
+  .phase-pill{font-size:12px; font-weight:700; color:var(--accent); background:rgba(34,201,154,0.12); padding:6px 12px; border-radius:20px; border:1px solid var(--accent-dim);}
+  main{padding:16px; max-width:640px; margin:0 auto;}
+  .screen{display:none;}
+  .screen.active{display:block; animation:fade .18s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+
+  .grid4{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px;}
+  .wcard{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:20px 16px; text-align:left; cursor:pointer;}
+  .wcard .letter{font-size:26px; font-weight:800; color:var(--accent);}
+  .wcard .name{font-size:14px; font-weight:700; margin-top:6px;}
+  .wcard .sub{font-size:12px; color:var(--text-dim); margin-top:2px;}
+
+  .section-title{font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); margin:22px 0 10px;}
+
+  .back-row{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .back-btn{background:var(--card2); border:1px solid var(--border); color:var(--text); border-radius:10px; padding:8px 12px; font-size:14px;}
+  .w-title{font-size:20px; font-weight:800;}
+  .w-sub{font-size:13px; color:var(--text-dim); margin-top:2px;}
+  .draft-status{font-size:11px; color:var(--accent); margin-top:6px; min-height:14px;}
+
+  .exercise{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:14px;}
+  #exerciseList{padding-bottom:150px;}
+  .exercise h3{margin:0 0 2px; font-size:16px;}
+  .ex-equip{font-size:12px; color:var(--text-dim); margin-bottom:2px;}
+  .ex-target{font-size:12px; color:var(--accent); font-weight:700; margin-bottom:12px;}
+  .ex-note{font-size:12px; color:var(--text-dim); margin-top:8px; line-height:1.4;}
+
+  .bulk-row{display:flex; gap:10px; margin-bottom:12px;}
+  .field{flex:1;}
+  .field label{display:block; font-size:11px; color:var(--text-dim); margin-bottom:5px;}
+  .field input{width:100%; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:17px; padding:10px 10px; border-radius:10px; text-align:center; font-weight:700;}
+  .field input:focus{outline:none; border-color:var(--accent);}
+
+  .setlist{border-top:1px solid var(--border); padding-top:10px;}
+  .set-row{display:flex; align-items:center; gap:10px; padding:6px 0;}
+  .set-num{width:22px; color:var(--text-dim); font-size:13px; font-weight:700;}
+  .set-reps{flex:1; font-size:13px; color:var(--text-dim);}
+  .set-reps b{color:var(--text); font-size:14px;}
+  .override-input{width:56px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:5px; text-align:center; font-size:13px; display:none;}
+  .override-input.show{display:inline-block;}
+  .override-link{font-size:11px; color:var(--accent); background:none; border:none; padding:0; margin-left:6px;}
+  .check{width:26px; height:26px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;}
+  .check.done{background:var(--accent); border-color:var(--accent); color:#08160f;}
+
+  .finish-bar{position:fixed; left:0; right:0; bottom:calc(64px + env(safe-area-inset-bottom)); padding:12px 16px; background:linear-gradient(180deg, rgba(13,21,32,0), var(--bg) 40%); z-index:40;}
+  .finish-btn{width:100%; max-width:608px; margin:0 auto; display:block; background:var(--accent); color:#06140e; border:none; border-radius:14px; padding:16px; font-size:16px; font-weight:800; box-shadow:0 6px 20px rgba(0,0,0,.35);}
+  .finish-btn:active{opacity:.85;}
+
+  nav.tabbar{position:fixed; left:0; right:0; bottom:0; display:flex; background:var(--bg2); border-top:1px solid var(--border); padding-bottom:env(safe-area-inset-bottom); z-index:50;}
+  nav.tabbar button{flex:1; background:none; border:none; color:var(--text-dim); padding:10px 0 8px; font-size:11px; display:flex; flex-direction:column; align-items:center; gap:4px;}
+  nav.tabbar button .ic{font-size:19px;}
+  nav.tabbar button.active{color:var(--accent);}
+
+  .toast{position:fixed; top:16px; left:50%; transform:translateX(-50%); background:var(--card2); border:1px solid var(--border); color:var(--text); padding:12px 18px; border-radius:12px; font-size:13px; z-index:999; box-shadow:0 8px 24px rgba(0,0,0,.4); max-width:88%; text-align:center;}
+  .toast.err{border-color:var(--danger); color:#ffd9d9;}
+
+  .report-photos{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0;}
+  .photo-slot{aspect-ratio:3/4; background:var(--card); border:1.5px dashed var(--border); border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:var(--text-dim); font-size:12px; overflow:hidden; position:relative;}
+  .photo-slot img{width:100%; height:100%; object-fit:cover; position:absolute; inset:0;}
+  .photo-slot .lbl{position:relative; z-index:1; background:rgba(0,0,0,.35); padding:2px 8px; border-radius:8px;}
+  .photo-slot input{position:absolute; inset:0; opacity:0; cursor:pointer;}
+
+  .measure-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:6px;}
+  .measure-grid .field input{font-size:16px;}
+
+  .card-block{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:16px;}
+  .btn{background:var(--accent); color:#06140e; border:none; border-radius:12px; padding:13px; font-weight:800; font-size:14px; width:100%;}
+  .btn.secondary{background:var(--card2); color:var(--text); border:1px solid var(--border);}
+  .btn.small{padding:9px; font-size:13px;}
+  .row-gap{display:flex; gap:10px;}
+  .row-gap > *{flex:1;}
+
+  .hist-item{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px 14px; margin-bottom:10px; font-size:13px;}
+  .hist-item .top{display:flex; justify-content:space-between; font-weight:700; margin-bottom:4px;}
+  .hist-item .top .badge{color:var(--accent);}
+  .hist-item .meta{color:var(--text-dim); font-size:12px;}
+  .pending{color:#f0b429; font-size:11px; margin-top:4px;}
+
+  input[type=text],input[type=number]{-moz-appearance:textfield;}
+  label.setting-label{display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px;}
+  input.settings-input{width:100%; background:var(--input-bg); border:1px solid var(--border); color:var(--text); padding:12px; border-radius:10px; font-size:14px; margin-bottom:12px;}
+  .status-dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px;}
+  .status-ok{background:var(--accent);}
+  .status-bad{background:var(--danger);}
+  .muted{color:var(--text-dim); font-size:12px; line-height:1.5;}
+  a{color:var(--accent);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><div class="logo">🏋️</div>RECOMP<span class="pro">PRO</span></div>
+  <div style="display:flex; align-items:center; gap:8px;">
+    <div class="phase-pill" id="phasePill">Faza 1</div>
+    <div class="date-pill" id="headerDate">--</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- EKRAN: WYBÓR TRENINGU -->
+  <section class="screen active" id="screen-home">
+    <div class="section-title">Wybierz trening</div>
+    <div class="grid4" id="workoutGrid"></div>
+  </section>
+
+  <!-- EKRAN: TRENING -->
+  <section class="screen" id="screen-workout">
+    <div class="back-row">
+      <button class="back-btn" onclick="goHome()">← Wróć</button>
+    </div>
+    <div class="w-title" id="wTitle"></div>
+    <div class="w-sub" id="wSub"></div>
+    <div class="draft-status" id="draftStatus"></div>
+    <div id="exerciseList" style="margin-top:16px;"></div>
+  </section>
+
+  <!-- EKRAN: RAPORT -->
+  <section class="screen" id="screen-report">
+    <div class="section-title">Raport sylwetki</div>
+    <div class="card-block">
+      <label class="setting-label">Data raportu</label>
+      <input type="date" class="settings-input" id="reportDate" onchange="loadTodayReportDraft()">
+      <div class="draft-status" id="reportDraftStatus"></div>
+
+      <div class="section-title" style="margin-top:6px;">Zdjęcia</div>
+      <div class="report-photos">
+        <div class="photo-slot" id="slot-front"><span class="lbl">Przód</span><input type="file" accept="image/*" capture="environment" onchange="handlePhoto(event,'front')"></div>
+        <div class="photo-slot" id="slot-back"><span class="lbl">Tył</span><input type="file" accept="image/*" capture="environment" onchange="handlePhoto(event,'back')"></div>
+        <div class="photo-slot" id="slot-side"><span class="lbl">Bok</span><input type="file" accept="image/*" capture="environment" onchange="handlePhoto(event,'side')"></div>
+      </div>
+
+      <div class="section-title">Obwody (cm)</div>
+      <div class="measure-grid">
+        <div class="field"><label>Biceps</label><input type="number" step="0.5" id="m-biceps" oninput="autosaveReport()"></div>
+        <div class="field"><label>Klatka piersiowa</label><input type="number" step="0.5" id="m-chest" oninput="autosaveReport()"></div>
+        <div class="field"><label>Pas</label><input type="number" step="0.5" id="m-waist" oninput="autosaveReport()"></div>
+        <div class="field"><label>Udo</label><input type="number" step="0.5" id="m-thigh" oninput="autosaveReport()"></div>
+      </div>
+
+      <div class="row-gap" style="margin-top:18px;">
+        <button class="btn secondary" onclick="saveReportLocal()">💾 Zapisz lokalnie</button>
+        <button class="btn" onclick="sendReportToDrive()">☁️ Wyślij na Dysk</button>
+      </div>
+      <div class="muted" style="margin-top:10px;">Zdjęcia i pomiary są zawsze najpierw zapisywane w pamięci telefonu. Wysyłka na Dysk Google jest dodatkowa i wymaga skonfigurowanego adresu w Ustawieniach.</div>
+    </div>
+
+    <div class="section-title">Historia raportów</div>
+    <div id="reportHistory"></div>
+  </section>
+
+  <!-- EKRAN: HISTORIA TRENINGÓW -->
+  <section class="screen" id="screen-history">
+    <div class="section-title">Historia treningów</div>
+    <div id="workoutHistory"></div>
+  </section>
+
+  <!-- EKRAN: USTAWIENIA -->
+  <section class="screen" id="screen-settings">
+    <div class="section-title">Ustawienia</div>
+    <div class="card-block">
+      <label class="setting-label">Adres Web App (Google Apps Script)</label>
+      <input type="text" class="settings-input" id="webhookUrl" placeholder="https://script.google.com/macros/s/.../exec">
+      <div class="row-gap">
+        <button class="btn small secondary" onclick="testConnection()">Testuj połączenie</button>
+        <button class="btn small" onclick="saveWebhook()">Zapisz</button>
+      </div>
+      <div id="connStatus" class="muted" style="margin-top:10px;"></div>
+    </div>
+    <div class="card-block">
+      <div class="section-title" style="margin-top:0;">Dane lokalne</div>
+      <div class="muted">Wszystkie zapisane treningi i raporty trzymane są na tym urządzeniu (localStorage + IndexedDB), nawet bez internetu.</div>
+      <div class="row-gap" style="margin-top:12px;">
+        <button class="btn small secondary" onclick="exportData()">Eksportuj kopię (JSON)</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<nav class="tabbar">
+  <button class="tab active" data-tab="home" onclick="switchTab('home')"><span class="ic">🏠</span>Trening</button>
+  <button class="tab" data-tab="report" onclick="switchTab('report')"><span class="ic">📷</span>Raport</button>
+  <button class="tab" data-tab="history" onclick="switchTab('history')"><span class="ic">📋</span>Historia</button>
+  <button class="tab" data-tab="settings" onclick="switchTab('settings')"><span class="ic">⚙️</span>Ustawienia</button>
+</nav>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
