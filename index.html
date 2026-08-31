@@ -109,6 +109,12 @@
   .rt-actions button:active{opacity:.6;}
   .rt-actions .rt-skip{color:var(--text-dim);}
 
+  .pair-tag{display:inline-block; font-size:11.5px; color:#8fd8c0; background:rgba(34,201,154,.10); border:1px solid var(--accent-dim); border-radius:8px; padding:4px 9px; margin-bottom:10px;}
+
+  .mode-row{display:flex; gap:8px; margin:4px 0 12px;}
+  .mode-btn{flex:1; background:var(--card2); border:1px solid var(--border); color:var(--text-dim); border-radius:11px; padding:11px 4px; font-size:13px; font-weight:700;}
+  .mode-btn.on{background:rgba(34,201,154,.14); border-color:var(--accent-dim); color:var(--accent);}
+
   /* --- przełączniki w ustawieniach --- */
   .switch-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 0; border-bottom:1px solid var(--border);}
   .switch-row:last-of-type{border-bottom:none;}
@@ -252,7 +258,17 @@
       <div id="connStatus" class="muted" style="margin-top:10px;"></div>
     </div>
     <div class="card-block">
-      <div class="section-title" style="margin-top:0;">Stoper przerw</div>
+      <div class="section-title" style="margin-top:0;">Tempo treningu</div>
+      <div class="mode-row">
+        <button class="mode-btn" id="mode-standard" onclick="setRestMode('standard')">Standard</button>
+        <button class="mode-btn" id="mode-szybki" onclick="setRestMode('szybki')">Szybki</button>
+        <button class="mode-btn" id="mode-ekspres" onclick="setRestMode('ekspres')">Ekspres</button>
+      </div>
+      <div class="muted" id="restModeDesc"></div>
+      <div class="muted" id="restModeEst" style="margin-top:8px;"></div>
+      <div class="muted" style="margin-top:8px;">Przysiad, RDL, hip thrust, front squat, wyciskania i podciąganie mają twardą podłogę 2 min niezależnie od trybu — skracanie przerwy akurat tam odbiera powtórzenia w kolejnych seriach.</div>
+
+      <div class="section-title">Stoper przerw</div>
       <div class="switch-row">
         <div>
           <div class="sw-name">Stoper przerw</div>

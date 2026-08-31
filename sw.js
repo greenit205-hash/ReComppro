@@ -1,4 +1,4 @@
-const CACHE_NAME = 'recomppro-v4';
+const CACHE_NAME = 'recomppro-v5';
 const ASSETS = [
   './',
   './index.html',

@@ -152,6 +152,56 @@ function renderFlags(){
   }
 }
 
+/* ===================== TEMPO TRENINGU (długość przerw) ===================== */
+function getRestMode(){
+  const m = localStorage.getItem('recomppro_rest_mode');
+  return REST_MODES[m] ? m : 'standard';
+}
+function setRestMode(mode){
+  if(!REST_MODES[mode]) return;
+  localStorage.setItem('recomppro_rest_mode', mode);
+  renderRestMode();
+  // jeśli trening jest otwarty, przerysuj karty, żeby zgadzały się wyświetlane przerwy
+  // (szkic jest zapisywany na bieżąco, więc openWorkout odtworzy wpisane wartości)
+  if(currentWorkoutKey && document.getElementById('screen-workout').classList.contains('active')){
+    openWorkout(currentWorkoutKey);
+  }
+  toast('Tempo: ' + REST_MODES[mode].label);
+}
+// Ciężkie boje mają twardą podłogę — skracanie przerwy akurat tam kosztuje
+// powtórzenia w kolejnych seriach, czyli objętość, czyli efekt treningu.
+function restFor(ex){
+  const base = ex.rest || DEFAULT_REST;
+  const scaled = Math.round(base * REST_MODES[getRestMode()].scale);
+  // podłoga chroni regenerację przed kolejną ciężką serią — ale przejście
+  // do partnera pary regeneracją nie jest, więc go nie dotyczy
+  if(ex.anchor && !ex.transition) return Math.max(scaled, ANCHOR_FLOOR);
+  return Math.max(scaled, 15);
+}
+function renderRestMode(){
+  const cur = getRestMode();
+  Object.keys(REST_MODES).forEach(k=>{
+    const b = document.getElementById('mode-' + k);
+    if(b) b.classList.toggle('on', k === cur);
+  });
+  const d = document.getElementById('restModeDesc');
+  if(d) d.textContent = REST_MODES[cur].desc;
+  const e = document.getElementById('restModeEst');
+  if(e) e.innerHTML = estimateAllDurations();
+}
+// szacowany czas sesji: przerwy + ok. 40 s pracy na serię + 5 min rozgrzewki
+function estimateWorkout(key){
+  const ex = WORKOUTS[key].exercises;
+  let sec = 300;
+  ex.forEach(e => { const n = effSets(e); sec += n * (40 + restFor(e)); });
+  return Math.round(sec / 60);
+}
+function estimateAllDurations(){
+  return Object.keys(WORKOUTS)
+    .map(k => k + ': <b>~' + estimateWorkout(k) + ' min</b>')
+    .join(' · ');
+}
+
 /* ===================== DŹWIĘK ===================== */
 let audioCtx = null;
 // AudioContext musi powstać w reakcji na dotknięcie ekranu — dlatego wołamy to
@@ -303,7 +353,7 @@ function switchTab(tab){
   if(tab==='report'){ document.getElementById('screen-report').classList.add('active'); renderReportHistory(); loadTodayReportDraft(); startReportAutosave(); }
   else { stopReportAutosave(); }
   if(tab==='history'){ document.getElementById('screen-history').classList.add('active'); renderWorkoutHistory(); }
-  if(tab==='settings'){ document.getElementById('screen-settings').classList.add('active'); renderCycleSettings(); renderFlags(); }
+  if(tab==='settings'){ document.getElementById('screen-settings').classList.add('active'); renderCycleSettings(); renderFlags(); renderRestMode(); }
 }
 function goHome(){
   stopAutosave();
@@ -452,6 +502,11 @@ function openWorkout(key){
     }
 
     const targetRir = effRir(ex);
+    const partnerEx = ex.pair ? WORKOUTS[currentWorkoutKey].exercises.find(e => e.id === ex.pair) : null;
+    const pairHtml = partnerEx
+      ? `<div class="pair-tag">⇄ w parze z: ${partnerEx.name}</div>`
+      : '';
+    const restTxt = fmtClock(restFor(ex));
     const setsTxt = currentIsDeload && nSets < ex.sets
       ? `<s>${ex.sets}</s> ${nSets} serie (deload)`
       : `${nSets} serie`;
@@ -459,7 +514,8 @@ function openWorkout(key){
     card.innerHTML = `
       <h3>${ex.name}</h3>
       <div class="ex-equip">${ex.equip}</div>
-      <div class="ex-target">Cel: ${ex.repRange} powt. · ${setsTxt} · RIR ${targetRir}${ex.perLeg ? ' · na nogę' : ''}${ex.perSide ? ' · na stronę' : ''}</div>
+      <div class="ex-target">Cel: ${ex.repRange} powt. · ${setsTxt} · RIR ${targetRir}${ex.perLeg ? ' · na nogę' : ''}${ex.perSide ? ' · na stronę' : ''} · przerwa ${restTxt}</div>
+      ${pairHtml}
       ${progHtml}
       <div class="bulk-row">
         <div class="field">
@@ -526,11 +582,12 @@ function toggleCheck(exId, setIdx){
     const isLastExercise = list[list.length - 1].id === exId;
     if(isLastSet && isLastExercise){ restStop(); return; }
 
-    const secs = ex.rest || DEFAULT_REST;
-    const label = ex.ssNext
-      ? 'Przejście do superserii · ' + ex.name
-      : `Przerwa po S${setIdx} · ${ex.name}`;
-    restStart(secs, label, !!ex.ssNext);
+    const partner = ex.pair ? list.find(e => e.id === ex.pair) : null;
+    const isTransition = !!(partner && list.indexOf(partner) > list.indexOf(ex));
+    const label = isTransition
+      ? '→ teraz: ' + partner.name
+      : (partner ? `Przerwa po parze · S${setIdx}` : `Przerwa po S${setIdx} · ${ex.name}`);
+    restStart(restFor(ex), label, isTransition);
   } else {
     restStop();   // cofnięcie odhaczenia = pomyłka, kasujemy odliczanie
   }
@@ -864,6 +921,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   renderWorkoutGrid();
   renderCycleSettings();
   renderFlags();
+  renderRestMode();
   initReportScreen();
   document.getElementById('webhookUrl').value = getWebhookUrl();
 
