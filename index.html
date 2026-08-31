@@ -49,11 +49,28 @@
   .ex-target{font-size:12px; color:var(--accent); font-weight:700; margin-bottom:12px;}
   .ex-note{font-size:12px; color:var(--text-dim); margin-top:8px; line-height:1.4;}
 
-  .bulk-row{display:flex; gap:10px; margin-bottom:12px;}
-  .field{flex:1;}
-  .field label{display:block; font-size:11px; color:var(--text-dim); margin-bottom:5px;}
-  .field input{width:100%; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:17px; padding:10px 10px; border-radius:10px; text-align:center; font-weight:700;}
+  .bulk-row{display:flex; gap:8px; margin-bottom:12px;}
+  .field{flex:1; min-width:0;}
+  .field label{display:block; font-size:11px; color:var(--text-dim); margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .field input{width:100%; background:var(--input-bg); border:1px solid var(--border); color:var(--text); font-size:17px; padding:10px 6px; border-radius:10px; text-align:center; font-weight:700;}
   .field input:focus{outline:none; border-color:var(--accent);}
+  .field-rir{max-width:96px;}
+  .field-rir input{border-color:#3a4a5e;}
+
+  /* --- baner cyklu / deload --- */
+  .cycle-banner{display:none; background:var(--card2); border:1px solid var(--border); border-radius:12px; padding:10px 14px; font-size:12.5px; color:var(--text-dim); line-height:1.45; margin-bottom:4px;}
+  .cycle-banner b{color:var(--text);}
+  .cycle-banner.deload{background:rgba(240,180,41,.10); border-color:#8a6a1f; color:#f3dca6;}
+  .cycle-banner.deload b{color:#f0b429;}
+
+  /* --- progresja podwójna --- */
+  .prog-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 12px;}
+  .prog{font-size:12px; color:var(--text-dim);}
+  .prog.ready{color:var(--accent); font-weight:700;}
+  .prog.ok{color:var(--accent); font-weight:700;}
+  .prog-btn{background:rgba(34,201,154,.14); border:1px solid var(--accent-dim); color:var(--accent); border-radius:9px; padding:6px 11px; font-size:12px; font-weight:700;}
+  .prog-btn:active{opacity:.7;}
+  .ex-target s{opacity:.5;}
 
   .setlist{border-top:1px solid var(--border); padding-top:10px;}
   .set-row{display:flex; align-items:center; gap:10px; padding:6px 0;}
@@ -75,7 +92,32 @@
   nav.tabbar button .ic{font-size:19px;}
   nav.tabbar button.active{color:var(--accent);}
 
-  .toast{position:fixed; top:16px; left:50%; transform:translateX(-50%); background:var(--card2); border:1px solid var(--border); color:var(--text); padding:12px 18px; border-radius:12px; font-size:13px; z-index:999; box-shadow:0 8px 24px rgba(0,0,0,.4); max-width:88%; text-align:center;}
+  /* --- stoper przerw --- */
+  .rest-timer{position:fixed; top:0; left:0; right:0; z-index:200; background:var(--card2); border-bottom:1px solid var(--border); transform:translateY(-110%); transition:transform .22s ease; padding-top:env(safe-area-inset-top);}
+  .rest-timer.show{transform:none;}
+  .rt-progress{height:3px; background:var(--accent); width:100%; transition:width .2s linear;}
+  .rest-timer.ending .rt-progress{background:#f0b429;}
+  .rest-timer.done .rt-progress{background:var(--danger);}
+  .rt-inner{display:flex; align-items:center; gap:12px; padding:10px 14px;}
+  .rt-left{flex:1; min-width:0;}
+  .rt-time{font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.1;}
+  .rest-timer.ending .rt-time{color:#f0b429;}
+  .rest-timer.done .rt-time{color:var(--accent);}
+  .rt-label{font-size:11px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;}
+  .rt-actions{display:flex; gap:6px; flex-shrink:0;}
+  .rt-actions button{background:var(--card); border:1px solid var(--border); color:var(--text); border-radius:9px; min-width:42px; height:38px; font-size:13px; font-weight:700;}
+  .rt-actions button:active{opacity:.6;}
+  .rt-actions .rt-skip{color:var(--text-dim);}
+
+  /* --- przełączniki w ustawieniach --- */
+  .switch-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 0; border-bottom:1px solid var(--border);}
+  .switch-row:last-of-type{border-bottom:none;}
+  .switch-row .sw-name{font-size:14px; font-weight:600;}
+  .switch-row .sw-desc{font-size:11.5px; color:var(--text-dim); margin-top:2px; line-height:1.4;}
+  .switch-btn{flex-shrink:0; background:var(--card2); border:1px solid var(--border); color:var(--text-dim); border-radius:20px; padding:7px 14px; font-size:12px; font-weight:700; min-width:96px;}
+  .switch-btn.on{background:rgba(34,201,154,.14); border-color:var(--accent-dim); color:var(--accent);}
+
+  .toast{position:fixed; top:78px; left:50%; transform:translateX(-50%); background:var(--card2); border:1px solid var(--border); color:var(--text); padding:12px 18px; border-radius:12px; font-size:13px; z-index:999; box-shadow:0 8px 24px rgba(0,0,0,.4); max-width:88%; text-align:center;}
   .toast.err{border-color:var(--danger); color:#ffd9d9;}
 
   .report-photos{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0;}
@@ -112,6 +154,22 @@
 </head>
 <body>
 
+<div class="rest-timer" id="restTimer">
+  <div class="rt-progress" id="rtProgress"></div>
+  <div class="rt-inner">
+    <div class="rt-left">
+      <div class="rt-time" id="rtTime">0:00</div>
+      <div class="rt-label" id="rtLabel"></div>
+    </div>
+    <div class="rt-actions">
+      <button onclick="restAdjust(-15)">−15</button>
+      <button onclick="restAdjust(15)">+15</button>
+      <button onclick="restTogglePause()" id="rtPause">❚❚</button>
+      <button class="rt-skip" onclick="restStop()">✕</button>
+    </div>
+  </div>
+</div>
+
 <header>
   <div class="brand"><div class="logo">🏋️</div>RECOMP<span class="pro">PRO</span></div>
   <div style="display:flex; align-items:center; gap:8px;">
@@ -124,6 +182,7 @@
 
   <!-- EKRAN: WYBÓR TRENINGU -->
   <section class="screen active" id="screen-home">
+    <div class="cycle-banner"></div>
     <div class="section-title">Wybierz trening</div>
     <div class="grid4" id="workoutGrid"></div>
   </section>
@@ -135,6 +194,7 @@
     </div>
     <div class="w-title" id="wTitle"></div>
     <div class="w-sub" id="wSub"></div>
+    <div class="cycle-banner" style="margin-top:12px;"></div>
     <div class="draft-status" id="draftStatus"></div>
     <div id="exerciseList" style="margin-top:16px;"></div>
   </section>
@@ -190,6 +250,46 @@
         <button class="btn small" onclick="saveWebhook()">Zapisz</button>
       </div>
       <div id="connStatus" class="muted" style="margin-top:10px;"></div>
+    </div>
+    <div class="card-block">
+      <div class="section-title" style="margin-top:0;">Stoper przerw</div>
+      <div class="switch-row">
+        <div>
+          <div class="sw-name">Stoper przerw</div>
+          <div class="sw-desc">Odliczanie startuje, gdy odhaczysz serię. Długość przerwy dobierana jest automatycznie do ćwiczenia. Przy włączonym stoperze serie startują nieodhaczone.</div>
+        </div>
+        <button class="switch-btn" id="flag-timer" onclick="toggleFlag('timer', true)">Włączone</button>
+      </div>
+      <div class="switch-row">
+        <div>
+          <div class="sw-name">Dźwięk</div>
+          <div class="sw-desc">Trzy krótkie sygnały odliczania i akord na koniec przerwy.</div>
+        </div>
+        <button class="switch-btn" id="flag-sound" onclick="toggleFlag('sound', true)">Włączone</button>
+      </div>
+      <div class="switch-row">
+        <div>
+          <div class="sw-name">Wibracja</div>
+          <div class="sw-desc">Dodatkowo wibracja na koniec przerwy — przydatne w słuchawkach albo w hałasie.</div>
+        </div>
+        <button class="switch-btn" id="flag-vibrate" onclick="toggleFlag('vibrate', true)">Włączone</button>
+      </div>
+      <div class="switch-row">
+        <div>
+          <div class="sw-name">Nie wygaszaj ekranu</div>
+          <div class="sw-desc">Ekran zostaje włączony przez cały czas trwania treningu. <span id="wakelockNote"></span></div>
+        </div>
+        <button class="switch-btn" id="flag-wakelock" onclick="toggleFlag('wakelock', true)">Włączone</button>
+      </div>
+    </div>
+    <div class="card-block">
+      <div class="section-title" style="margin-top:0;">Cykl treningowy</div>
+      <div class="muted">6 tygodni pracy + 7. tydzień deloadu (2 serie zamiast pełnej liczby, ten sam ciężar, RIR 4). Aplikacja sama policzy, w którym tygodniu jesteś, i w tygodniu deloadu skróci liczbę serii.</div>
+      <div id="cycleStatus" class="muted" style="margin:12px 0;"></div>
+      <div class="row-gap">
+        <button class="btn small secondary" onclick="clearCycle()">Wyłącz licznik</button>
+        <button class="btn small" onclick="startNewCycle()">Rozpocznij nowy cykl</button>
+      </div>
     </div>
     <div class="card-block">
       <div class="section-title" style="margin-top:0;">Dane lokalne</div>
