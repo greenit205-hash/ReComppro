@@ -364,15 +364,47 @@ function goHome(){
   document.querySelectorAll('nav.tabbar .tab').forEach(b=>b.classList.toggle('active', b.dataset.tab==='home'));
 }
 
+/* ===================== WYBÓR PLANU (3 / 4 dni) ===================== */
+// Zmiana planu podmienia globalny WORKOUTS. Szkice są trzymane pod kluczem
+// treningu (A–D kontra 1–3), a klucze obu planów są rozłączne, więc
+// niedokończony trening z drugiego wariantu nigdy się nie nadpisze.
+function setPlanKey(key){
+  if(!PLANS[key]) return;
+  if(key === getPlanKey()){ renderPlanSwitch(); return; }
+  localStorage.setItem('recomppro_plan', key);
+  WORKOUTS = PLANS[key].workouts;
+  currentWorkoutKey = null;
+  renderPlanSwitch();
+  renderWorkoutGrid();
+  renderRestMode();
+  toast('Plan na ten tydzień: ' + PLANS[key].label);
+}
+
+function renderPlanSwitch(){
+  const cur = getPlanKey();
+  Object.keys(PLANS).forEach(k=>{
+    const b = document.getElementById('plan-' + k);
+    if(b) b.classList.toggle('on', k === cur);
+  });
+  const d = document.getElementById('planDesc');
+  if(d) d.textContent = PLANS[cur].desc;
+  const s = document.getElementById('planSettingsInfo');
+  if(s) s.textContent = 'Aktywny plan: ' + PLANS[cur].short + '. ' + PLANS[cur].desc;
+}
+
 /* ===================== EKRAN GŁÓWNY ===================== */
 function renderWorkoutGrid(){
   renderCycleBanner();
+  renderPlanSwitch();
   const grid = document.getElementById('workoutGrid');
   grid.innerHTML = '';
-  Object.keys(WORKOUTS).forEach(key=>{
+  const keys = Object.keys(WORKOUTS);
+  keys.forEach((key, i)=>{
     const w = WORKOUTS[key];
     const card = document.createElement('div');
-    card.className = 'wcard';
+    // przy nieparzystej liczbie treningów ostatnia karta zajmuje całą szerokość,
+    // żeby nie zostawiać dziury w siatce dwukolumnowej
+    card.className = 'wcard' + ((keys.length % 2 === 1 && i === keys.length - 1) ? ' wide' : '');
     card.onclick = ()=>openWorkout(key);
     card.innerHTML = `<div class="letter">${key}</div><div class="name">${w.label}</div><div class="sub">${w.subtitle}</div>`;
     grid.appendChild(card);
@@ -619,6 +651,7 @@ function collectWorkoutData(){
     workoutKey: currentWorkoutKey,
     workoutLabel: w.label,
     phase: CURRENT_PHASE,
+    planDays: PLANS[getPlanKey()].days,
     cycleWeek: info ? info.week : null,
     isDeload: currentIsDeload,
     exercises
