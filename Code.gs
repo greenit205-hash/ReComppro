@@ -88,6 +88,33 @@ function migrateWorkoutHeaders(sh) {
   sh.setFrozenRows(1);
 }
 
+/**
+ * Raport sylwetki: pomiary do arkusza, zdjęcia na Dysk.
+ * UWAGA: ta funkcja zgubiła się przy aktualizacji do Fazy 3 — doPost ją woła,
+ * więc bez niej każda wysyłka raportu kończyła się błędem
+ * "saveReport is not defined". Przywrócona 10.11.2026.
+ */
+function saveReport(data) {
+  const sh = getSheet('Raporty Sylwetki', ['Data', 'Biceps (cm)', 'Klatka (cm)', 'Pas (cm)', 'Udo (cm)', 'Zdjęcie przód', 'Zdjęcie tył', 'Zdjęcie bok']);
+  const rootFolder = getOrCreateFolder('RecompPro - Raporty');
+  const dateFolder = getOrCreateSubfolder(rootFolder, data.date);
+
+  const links = {};
+  ['front', 'back', 'side'].forEach(key => {
+    const photo = data.photos && data.photos[key];
+    if (photo) {
+      const base64 = photo.split(',')[1];
+      const blob = Utilities.newBlob(Utilities.base64Decode(base64), 'image/jpeg', key + '.jpg');
+      const file = dateFolder.createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      links[key] = file.getUrl();
+    }
+  });
+
+  const m = data.measurements || {};
+  sh.appendRow([data.date, m.biceps || '', m.chest || '', m.waist || '', m.thigh || '', links.front || '', links.back || '', links.side || '']);
+}
+
 function getOrCreateFolder(name) {
   const folders = DriveApp.getFoldersByName(name);
   return folders.hasNext() ? folders.next() : DriveApp.createFolder(name);
