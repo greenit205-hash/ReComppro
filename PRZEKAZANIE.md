@@ -68,3 +68,71 @@ README.md          — pełna instrukcja wdrożenia (GitHub Pages / Netlify + Go
 
 ---
 *Ten plik jest tylko dokumentem kontekstowym na potrzeby przekazania między rozmowami — nie jest częścią samej aplikacji i nie musi trafiać do repozytorium/hostingu.*
+
+
+## Wariant 3-dniowy (dodany 5.10.2026)
+
+Aplikacja ma teraz dwa plany do wyboru, przełączane na ekranie głównym:
+
+- **4 dni** (klucze treningów `A`–`D`) — dotychczasowy podział góra/dół, 90 serii/tydz.
+- **3 dni** (klucze `1`–`3`) — trzy sesje całego ciała, 70 serii/tydz.
+
+Mechanika:
+
+- `data.js` eksportuje `PLAN_4`, `PLAN_3` oraz `PLANS` (metadane: `days`, `label`,
+  `short`, `desc`, `workouts`). Wybór siedzi w `localStorage` pod `recomppro_plan`,
+  domyślnie `"4"`.
+- `WORKOUTS` jest teraz **`let`, nie `const`** — `setPlanKey()` w `app.js` podmienia
+  je w locie, a reszta kodu czyta globalną nazwę w momencie wywołania, więc działa
+  bez zmian.
+- **Identyfikatory ćwiczeń są celowo wspólne dla obu planów** (`p3b1` to ten sam
+  przysiad w `B` i w `1`). Dzięki temu ciężary i podpowiedzi progresji przechodzą
+  między wariantami. Przy edycji trzeba pilnować, żeby to samo `id` miało w obu
+  planach ten sam `repRange`, `step` i nazwę — inaczej `progressionHint()` zgłupieje.
+  Pilnuje tego test `/tmp/claude-0/t3.js`.
+- **Klucze treningów są rozłączne** (`A`–`D` kontra `1`–`3`), więc szkice
+  (`recomppro_drafts`) z jednego wariantu nie nadpiszą drugiego.
+- Przy nieparzystej liczbie treningów ostatnia karta na ekranie głównym dostaje
+  klasę `wide` (`grid-column: 1 / -1`), żeby nie zostawiać dziury w siatce.
+- `collectWorkoutData()` dokłada pole `planDays`, a `Code.gs` zapisuje je
+  w nowej kolumnie **„Plan (dni)"** (13., dopisywana na końcu przez
+  `migrateWorkoutHeaders()` — kolumny 1–12 zostają nietknięte).
+- `sw.js`: `CACHE_NAME` podbity do `recomppro-v6`.
+
+Cykl deloadu liczy **tygodnie kalendarzowe, nie treningi**, więc przeplatanie
+wariantów go nie psuje.
+
+## Zamiana wyciskań (10.11.2026)
+
+- **Ławka pozioma: hantle → sztanga**, id `p3a1` → **`p3a1s`**.
+- **Ławka skośna: sztanga → hantle**, id `p3a3` → **`p3a3h`**.
+
+Nowe id są konieczne: ciężar hantli (25,5 kg/rękę) nie może się podpowiedzieć
+przy sztandze (~70 kg). Historia starych id zostaje w zakładce Historia.
+
+Użytkownik ma **dwie sztangi**, więc para `p3a1s` ⇄ `p3a2` (wyciskanie ⇄ wiosłowanie
+sztangą) jest wykonalna i została bez zmian.
+
+W planie 3-dniowym, Trening 3, trzeba było przepiąć pary — po zamianie wyciskanie
+skośne (hantle) i wiosłowanie hantlem jednorącz sięgałyby po ten sam sprzęt:
+
+- `p3a5` (face pulls, transition) ⇄ `p3a3h`
+- `p3c3` (wiosłowanie hantlem, transition) ⇄ `p3c7` (wąski chwyt, sztanga)
+
+### Naprawione przy okazji (usterki z 5.10.2026)
+
+Test par (`scratchpad/t.js`) dostał dwie nowe kontrole, które wykryły:
+
+1. **Konflikt sprzętu w parze** — `p3c5` (wznosy bokiem, hantle) ⇄ `p3c6`
+   (odwodzenie w opadzie, „Hantle lub Wyciąg"). `p3c6` ma teraz `equip: "Wyciąg + Uchwyty"`.
+2. **Strona z krótką przerwą miała więcej serii niż partner** — wtedy nadmiarowe
+   serie dostają czas przejścia (25–50 s) zamiast pełnej przerwy. Dotyczyło
+   `p3c5` (4 vs 3) i `p3c1` w planie 3-dniowym (4 vs 3). Naprawione przez
+   podniesienie serii partnera (`p3c6` 3→4) albo odwrócenie kolejności w parze
+   (`p3c2` ⇄ `p3c1` w Treningu 2, `p3a5` ⇄ `p3a3h` w Treningu 3).
+3. `p3d3` miał dwie różne nazwy w obu planach — ujednolicone.
+
+**Reguła do zapamiętania:** w parze ćwiczenie z `transition: true` nie może mieć
+więcej serii niż jego partner, a oba nie mogą wymagać tego samego sprzętu.
+
+`sw.js`: `CACHE_NAME` → `recomppro-v7`.

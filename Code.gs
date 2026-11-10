@@ -47,7 +47,7 @@ function getSheet(name, headers) {
 // treningi z Fazy 1 i 2. Nowe kolumny (RIR itd.) dopisywane są NA KOŃCU,
 // żeby stare wiersze w arkuszu pozostały poprawnie wyrównane.
 const WORKOUT_HEADERS = ['Data', 'Trening', 'Ćwiczenie', 'Seria', 'Ciężar (kg)', 'Powtórzenia', 'Wykonano',
-                         'RIR', 'RIR cel', 'Zakres powt.', 'Tydzień cyklu', 'Deload'];
+                         'RIR', 'RIR cel', 'Zakres powt.', 'Tydzień cyklu', 'Deload', 'Plan (dni)'];
 
 function saveWorkout(data) {
   const sh = getSheet('Log Treningowy', WORKOUT_HEADERS);
@@ -66,7 +66,8 @@ function saveWorkout(data) {
         (ex.targetRir === null || ex.targetRir === undefined) ? '' : ex.targetRir,
         ex.repRange || '',
         data.cycleWeek || '',
-        data.isDeload ? 'TAK' : ''
+        data.isDeload ? 'TAK' : '',
+        data.planDays || ''
       ]);
     });
   });
