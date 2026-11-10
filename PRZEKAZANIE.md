@@ -176,3 +176,46 @@ multimediów, nie dzwonka. Jeśli ten kanał jest ściszony, żadne ustawienie
 w aplikacji tego nie przebije.
 
 `sw.js`: `CACHE_NAME` → `recomppro-v8`
+
+## Aplikacja nie aktualizowała się na telefonie (10.11.2026) — PRZYCZYNA ŹRÓDŁOWA
+
+Użytkownik zamknął i otworzył aplikację kilka razy i nadal miał starą wersję,
+mimo że pliki na GitHub Pages były poprawne. To nie był przypadek — do v8
+aktualizacja **nie mogła** zadziałać niezawodnie:
+
+1. `sw.js` serwował **wyłącznie z cache**: `caches.match(req).then(c => c || fetch(req))`.
+   Raz zapisany plik był podawany w nieskończoność. Sieć była odpytywana tylko
+   wtedy, gdy czegoś w cache NIE było.
+2. Jedyną drogą do nowego kodu była podmiana samego `sw.js` — przeglądarka
+   instaluje nowego workera, gdy wykryje w nim różnicę bajtową. Ale `sw.js`
+   jest pobierany zwykłym żądaniem HTTP i **GitHub Pages podaje go z własnym
+   nagłówkiem cache**. `netlify.toml` ustawia dla niego `no-cache`, ale ten plik
+   **działa tylko na Netlify i na Pages jest całkowicie ignorowany**.
+3. Dodatkowo `cache.addAll()` przy instalacji pobierał pliki przez cache HTTP,
+   więc nowy worker potrafił zapisać do swojego cache STARE pliki.
+
+Czyli podbijanie `CACHE_NAME` przy każdym wydaniu — co robiliśmy od v5 do v8 —
+było zabiegiem, który działał tylko wtedy, gdy przeglądarka akurat zechciała
+pobrać świeży `sw.js`. Rada „otwórz aplikację dwa razy" opierała się na tym
+samym przypadku i dlatego bywała skuteczna, a bywała nie.
+
+### Naprawa (v9)
+
+- **`sw.js` przepisany na network-first** z limitem 3,5 s i zapasem z cache.
+  Online = zawsze świeży kod. Offline/słaby zasięg = cache, jak dotąd.
+- `cache.addAll()` z `new Request(u, {cache:'reload'})` — omija cache HTTP.
+- Obsługa `message: 'skipWaiting'`, żeby strona mogła wymusić przejęcie.
+- Przechwytywane są tylko **GET** i tylko **ten sam origin** — POST do Apps
+  Script i żądania do Google nigdy nie przechodzą przez workera.
+- `app.js`: `reg.update()` przy starcie, przy każdym powrocie do aplikacji
+  (`visibilitychange`) i raz na godzinę; `controllerchange` → jednorazowy
+  `location.reload()`, więc nowa wersja wchodzi sama, bez zamykania aplikacji.
+- **`APP_VERSION` w `data.js`, pokazywana w Ustawieniach** — od tej pory
+  wystarczy spojrzeć, żeby wiedzieć, co jest zainstalowane. Tego brakowało
+  i dlatego diagnoza zajęła tyle czasu.
+- Przyciski **„Sprawdź aktualizację"** (porównuje `APP_VERSION` z serwerem,
+  pobierając `data.js` z `cache:'no-store'`) i **„Wyczyść i pobierz na nowo"**
+  (wyrejestrowuje workera i kasuje wszystkie cache; dane użytkownika
+  w localStorage i IndexedDB zostają nietknięte).
+
+**Przy każdym wydaniu podnoś `APP_VERSION` w `data.js` RAZEM z `CACHE_NAME` w `sw.js`.**

@@ -1026,6 +1026,55 @@ async function exportData(){
   a.click();
 }
 
+
+/* ===================== WERSJA I AKTUALIZACJE ===================== */
+let swReg = null;
+
+function renderVersion(){
+  const el = document.getElementById('appVersion');
+  if(el) el.textContent = APP_VERSION;
+}
+
+async function checkForUpdate(){
+  const st = document.getElementById('updStatus');
+  if(st) st.textContent = 'Sprawdzam…';
+  try{
+    if(swReg) await swReg.update();
+    // wymuś pobranie z sieci, omijając cache HTTP
+    const r = await fetch('data.js?cb=' + Date.now(), { cache: 'no-store' });
+    const txt = await r.text();
+    const m = txt.match(/APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+    const serverVer = m ? m[1] : null;
+    if(!serverVer){
+      if(st) st.textContent = 'Nie udało się odczytać wersji z serwera.';
+      return;
+    }
+    if(serverVer === APP_VERSION){
+      if(st) st.textContent = 'Masz najnowszą wersję (' + APP_VERSION + ').';
+    } else {
+      if(st) st.textContent = 'Na serwerze jest ' + serverVer + ' — przeładowuję…';
+      setTimeout(()=>location.reload(true), 900);
+    }
+  }catch(e){
+    if(st) st.textContent = 'Brak połączenia — nie mogę sprawdzić.';
+  }
+}
+
+async function hardReset(){
+  if(!confirm('Wyczyścić pamięć podręczną aplikacji i pobrać ją na nowo?\n\nZapisane treningi i raporty ZOSTAJĄ — kasowane są tylko pliki aplikacji.')) return;
+  try{
+    if('serviceWorker' in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+    if(window.caches){
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
+    }
+  }catch(e){}
+  location.reload(true);
+}
+
 /* ===================== START ===================== */
 window.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('headerDate').textContent = fmtDatePL(todayISO());
@@ -1038,7 +1087,32 @@ window.addEventListener('DOMContentLoaded', ()=>{
   initReportScreen();
   document.getElementById('webhookUrl').value = getWebhookUrl();
 
+  renderVersion();
+
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      swReg = reg;
+      reg.update();
+      // sprawdzaj przy każdym powrocie do aplikacji i raz na godzinę
+      document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) reg.update(); });
+      setInterval(()=>reg.update(), 60*60*1000);
+      reg.addEventListener('updatefound', ()=>{
+        const nw = reg.installing;
+        if(!nw) return;
+        nw.addEventListener('statechange', ()=>{
+          if(nw.state === 'installed' && navigator.serviceWorker.controller){
+            toast('Nowa wersja — odświeżam…');
+            nw.postMessage('skipWaiting');
+          }
+        });
+      });
+    }).catch(()=>{});
+    // gdy nowy worker przejmie stronę, przeładuj ją raz, żeby wczytać nowy kod
+    let swReloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+      if(swReloaded) return;
+      swReloaded = true;
+      location.reload();
+    });
   }
 });

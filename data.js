@@ -18,6 +18,10 @@
 //     dla danego mięśnia; kolejność ćwiczeń ustawiona tak, by partnerzy sąsiadowali
 const CURRENT_PHASE = 3;
 
+// Widoczna w Ustawieniach — pozwala od ręki sprawdzić, czy telefon ma już
+// nową wersję. Podnoś ją przy każdym wydaniu razem z CACHE_NAME w sw.js.
+const APP_VERSION = 'v9 · 10.11.2026';
+
 // Cykl treningowy: 6 tygodni pracy + 1 tydzień deloadu
 const CYCLE_WEEKS = 7;
 const DELOAD_WEEK = 7;

@@ -332,6 +332,16 @@
       </div>
     </div>
     <div class="card-block">
+      <div class="section-title" style="margin-top:0;">Wersja aplikacji</div>
+      <div class="muted">Zainstalowana wersja: <b id="appVersion">—</b></div>
+      <div class="row-gap" style="margin-top:12px;">
+        <button class="btn small secondary" onclick="checkForUpdate()">Sprawdź aktualizację</button>
+        <button class="btn small secondary" onclick="hardReset()">Wyczyść i pobierz na nowo</button>
+      </div>
+      <div class="muted" id="updStatus" style="margin-top:10px;"></div>
+      <div class="muted" style="margin-top:8px;">„Wyczyść i pobierz na nowo” kasuje wyłącznie pliki aplikacji. Zapisane treningi, szkice i raporty zostają nietknięte.</div>
+    </div>
+    <div class="card-block">
       <div class="section-title" style="margin-top:0;">Dane lokalne</div>
       <div class="muted">Wszystkie zapisane treningi i raporty trzymane są na tym urządzeniu (localStorage + IndexedDB), nawet bez internetu.</div>
       <div class="row-gap" style="margin-top:12px;">
