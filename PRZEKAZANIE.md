@@ -136,3 +136,43 @@ Test par (`scratchpad/t.js`) dostał dwie nowe kontrole, które wykryły:
 więcej serii niż jego partner, a oba nie mogą wymagać tego samego sprzętu.
 
 `sw.js`: `CACHE_NAME` → `recomppro-v7`.
+
+
+## Głośniejszy stoper (10.11.2026)
+
+Użytkownik zgłosił, że odliczania i sygnału końca przerwy prawie nie słychać.
+Przyczyny były trzy naraz, wszystkie w `beep()`:
+
+1. `gain` **0.14** dla odliczania i **0.30** dla końca — bardzo nisko.
+2. `osc.type = 'sine'` — najcichszy przebieg przy danej amplitudzie, bo nie ma
+   harmonicznych.
+3. **660 Hz** — poniżej pasma, w którym małe głośniki telefonów mają sens;
+   ich sprawność rośnie dopiero powyżej ok. 800 Hz.
+
+Co zrobione:
+
+- **Przebieg prostokątny + dołożona oktawa (sinus, 0.5)** — nieparzyste
+  harmoniczne przebijają się przez hałas nieporównanie lepiej niż sinus.
+- **Pasmo 820–1976 Hz** zamiast 660 — szczyt czułości ucha i sprawności głośnika.
+- **`DynamicsCompressor` na wyjściu** (`threshold -20, ratio 12, attack 0.002`).
+  To jest klucz: pozwala podbić sygnał grubo powyżej tego, co zniósłby czysty
+  tor, bez trzasków. Bez kompresora poziom „głośny" przesterowywał.
+- **Dłuższe tony** — 0.15 s zamiast 0.09 dla odliczania (ucho całkuje głośność
+  przez ok. 100–200 ms, więc bardzo krótki dźwięk jest słyszany jako cichszy).
+- **Odliczanie od 5 s zamiast 3**, z wysokością rosnącą co sekundę
+  (820 → 1100 Hz), więc samo brzmienie mówi, ile zostało.
+- **Sygnał końca grany dwa razy** (fraza 1175/1568/1976 Hz, powtórzona po 1,1 s).
+- **Wibracja** przy każdym ticku (70 ms) i mocniejszy wzorzec na koniec.
+- **Trzy poziomy głośności** w Ustawieniach (`recomppro_sound_level`:
+  cichy 0.30 / normalny 0.80 / głośny 1.70) z przyciskiem „Odtwórz próbkę".
+  Wybór poziomu od razu odtwarza próbkę.
+
+Architektura dźwięku: `audioCtx -> compressor (audioBus) -> masterGain -> destination`.
+Wszystkie tony wpinają się w `audioBus`, `masterGain` trzyma poziom z ustawień.
+`beep()` zostawione jako alias `tone()` dla zgodności wstecz.
+
+**Ograniczenie do zakomunikowania użytkownikowi:** WebAudio idzie przez kanał
+multimediów, nie dzwonka. Jeśli ten kanał jest ściszony, żadne ustawienie
+w aplikacji tego nie przebije.
+
+`sw.js`: `CACHE_NAME` → `recomppro-v8`

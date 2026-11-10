@@ -203,41 +203,119 @@ function estimateAllDurations(){
 }
 
 /* ===================== DŹWIĘK ===================== */
-let audioCtx = null;
+// Poprzednia wersja była ledwo słyszalna z trzech powodów naraz:
+// sinus (najcichszy przebieg przy tej samej amplitudzie), 660 Hz (tam głośniki
+// telefonów są najsłabsze) i gain 0.14. Teraz: przebieg prostokątny z dodaną
+// oktawą, 1–2 kHz (szczyt czułości ucha i sprawności małego głośnika),
+// kompresor na wyjściu i dłuższe tony.
+let audioCtx = null, masterGain = null, audioBus = null;
+
+const SOUND_LEVELS = {
+  cichy:    { label: 'Cichy',    gain: 0.30, desc: 'Gdy ktoś śpi w domu.' },
+  normalny: { label: 'Normalny', gain: 0.80, desc: 'Domyślny — cicha siłownia w domu.' },
+  glosny:   { label: 'Głośny',   gain: 1.70, desc: 'Hałas, muzyka albo telefon leżący dalej.' }
+};
+const DEFAULT_SOUND_LEVEL = 'normalny';
+
+function getSoundLevel(){
+  const v = localStorage.getItem('recomppro_sound_level');
+  return SOUND_LEVELS[v] ? v : DEFAULT_SOUND_LEVEL;
+}
+function setSoundLevel(k){
+  if(!SOUND_LEVELS[k]) return;
+  localStorage.setItem('recomppro_sound_level', k);
+  renderSoundLevel();
+  testSound();              // od razu słychać, co się wybrało
+}
+function renderSoundLevel(){
+  const cur = getSoundLevel();
+  Object.keys(SOUND_LEVELS).forEach(k=>{
+    const b = document.getElementById('snd-' + k);
+    if(b) b.classList.toggle('on', k === cur);
+  });
+  const d = document.getElementById('soundLevelDesc');
+  if(d) d.textContent = SOUND_LEVELS[cur].desc;
+}
+
 // AudioContext musi powstać w reakcji na dotknięcie ekranu — dlatego wołamy to
-// z toggleCheck(), a nie przy starcie aplikacji.
+// z toggleCheck()/restStart()/testSound(), a nie przy starcie aplikacji.
 function ensureAudio(){
   try{
     if(!audioCtx){
       const AC = window.AudioContext || window.webkitAudioContext;
       if(!AC) return null;
       audioCtx = new AC();
+      // Kompresor pozwala podbić sygnał grubo powyżej tego, co zniósłby
+      // czysty tor — bez tego przy głośniejszych ustawieniach słychać trzaski.
+      const comp = audioCtx.createDynamicsCompressor();
+      comp.threshold.value = -20;
+      comp.knee.value = 10;
+      comp.ratio.value = 12;
+      comp.attack.value = 0.002;
+      comp.release.value = 0.10;
+      masterGain = audioCtx.createGain();
+      comp.connect(masterGain);
+      masterGain.connect(audioCtx.destination);
+      audioBus = comp;
     }
     if(audioCtx.state === 'suspended') audioCtx.resume();
+    masterGain.gain.value = SOUND_LEVELS[getSoundLevel()].gain;
     return audioCtx;
   }catch(e){ return null; }
 }
-function beep(freq, dur, vol){
+
+// Prostokąt niesie nieparzyste harmoniczne i przebija się przez hałas
+// znacznie lepiej niż sinus; dołożona oktawa dodaje ostrości.
+function tone(freq, dur, vol){
   if(!getFlag('sound', true)) return;
   const ctx = ensureAudio();
   if(!ctx) return;
   const t = ctx.currentTime;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.006);
+  g.gain.setValueAtTime(vol, t + dur * 0.75);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  g.connect(audioBus);
+
   const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = 'sine';
+  osc.type = 'square';
   osc.frequency.value = freq;
-  gain.gain.setValueAtTime(0.0001, t);
-  gain.gain.exponentialRampToValueAtTime(vol, t + 0.012);
-  gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  osc.connect(gain); gain.connect(ctx.destination);
-  osc.start(t); osc.stop(t + dur + 0.03);
+  osc.connect(g);
+  osc.start(t); osc.stop(t + dur + 0.02);
+
+  const oct = ctx.createOscillator();
+  const octG = ctx.createGain();
+  oct.type = 'sine';
+  oct.frequency.value = freq * 2;
+  octG.gain.value = 0.5;
+  oct.connect(octG); octG.connect(g);
+  oct.start(t); oct.stop(t + dur + 0.02);
 }
-function tickBeep(){ beep(660, 0.09, 0.14); }
+// zgodność wstecz — stare wywołania beep() nadal działają
+function beep(freq, dur, vol){ tone(freq, dur, vol); }
+
+// Odliczanie: 5 sekund zamiast 3, a wysokość rośnie z każdą sekundą,
+// więc samo brzmienie mówi, ile zostało.
+function tickBeep(left){
+  const n = Math.min(Math.max(left, 1), 5);
+  tone(820 + (5 - n) * 70, 0.15, 0.85);
+  if(getFlag('vibrate', true) && navigator.vibrate) navigator.vibrate(70);
+}
+
 function finishBeep(){
-  beep(880, 0.16, 0.30);
-  setTimeout(()=>beep(1175, 0.16, 0.30), 190);
-  setTimeout(()=>beep(1568, 0.42, 0.30), 380);
-  if(getFlag('vibrate', true) && navigator.vibrate) navigator.vibrate([220,110,220,110,420]);
+  // dwa przebiegi tej samej frazy — jeden sygnał łatwo przegapić
+  [[0,1175,0.18],[210,1568,0.18],[420,1976,0.60],
+   [1100,1175,0.18],[1310,1568,0.18],[1520,1976,0.85]]
+    .forEach(([ms,f,d])=> setTimeout(()=>tone(f, d, 1.0), ms));
+  if(getFlag('vibrate', true) && navigator.vibrate)
+    navigator.vibrate([300,120,300,120,600,200,600]);
+}
+
+function testSound(){
+  tone(880, 0.16, 0.9);
+  setTimeout(()=>tone(1175, 0.16, 0.9), 200);
+  setTimeout(()=>tone(1568, 0.55, 1.0), 400);
 }
 
 /* ===================== BLOKADA WYGASZANIA EKRANU ===================== */
@@ -295,9 +373,10 @@ function restTick(){
   const pct = Rest.total ? Math.max(0, Math.min(100, (left / Rest.total) * 100)) : 0;
   document.getElementById('rtProgress').style.width = pct + '%';
   el.classList.toggle('ending', left <= 10 && Rest.pausedLeft === null);
+  el.classList.toggle('last5', left <= 5 && left > 0 && Rest.pausedLeft === null);
 
   if(Rest.pausedLeft !== null) return;
-  if(left <= 3 && left > 0 && Rest.lastTick !== left){ Rest.lastTick = left; tickBeep(); }
+  if(left <= 5 && left > 0 && Rest.lastTick !== left){ Rest.lastTick = left; tickBeep(left); }
   if(left === 0){
     clearInterval(Rest.timer); Rest.timer = null;
     finishBeep();
@@ -336,7 +415,7 @@ function restStop(){
   if(Rest.timer){ clearInterval(Rest.timer); Rest.timer = null; }
   Rest.pausedLeft = null;
   const el = document.getElementById('restTimer');
-  if(el){ el.classList.remove('show','ending','done'); }
+  if(el){ el.classList.remove('show','ending','done','last5'); }
 }
 
 /* ===================== NAWIGACJA ===================== */
@@ -353,7 +432,7 @@ function switchTab(tab){
   if(tab==='report'){ document.getElementById('screen-report').classList.add('active'); renderReportHistory(); loadTodayReportDraft(); startReportAutosave(); }
   else { stopReportAutosave(); }
   if(tab==='history'){ document.getElementById('screen-history').classList.add('active'); renderWorkoutHistory(); }
-  if(tab==='settings'){ document.getElementById('screen-settings').classList.add('active'); renderCycleSettings(); renderFlags(); renderRestMode(); }
+  if(tab==='settings'){ document.getElementById('screen-settings').classList.add('active'); renderCycleSettings(); renderFlags(); renderRestMode(); renderSoundLevel(); }
 }
 function goHome(){
   stopAutosave();
@@ -955,6 +1034,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   renderCycleSettings();
   renderFlags();
   renderRestMode();
+  renderSoundLevel();
   initReportScreen();
   document.getElementById('webhookUrl').value = getWebhookUrl();
 

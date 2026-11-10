@@ -117,6 +117,7 @@
   .mode-btn.on{background:rgba(34,201,154,.14); border-color:var(--accent-dim); color:var(--accent);}
 
   /* --- przełączniki w ustawieniach --- */
+  #restTimer.last5 #rtTime{color:#ffd166; transform:scale(1.12); transition:transform .12s ease;}
   .switch-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 0; border-bottom:1px solid var(--border);}
   .switch-row:last-of-type{border-bottom:none;}
   .switch-row .sw-name{font-size:14px; font-weight:600;}
@@ -291,9 +292,20 @@
       <div class="switch-row">
         <div>
           <div class="sw-name">Dźwięk</div>
-          <div class="sw-desc">Trzy krótkie sygnały odliczania i akord na koniec przerwy.</div>
+          <div class="sw-desc">Odliczanie przez ostatnie 5 sekund, potem dwukrotny sygnał końca przerwy.</div>
         </div>
         <button class="switch-btn" id="flag-sound" onclick="toggleFlag('sound', true)">Włączone</button>
+      </div>
+      <div style="padding:12px 0 2px;">
+        <div class="sw-name" style="margin-bottom:8px;">Głośność sygnału</div>
+        <div class="mode-row">
+          <button class="mode-btn" id="snd-cichy" onclick="setSoundLevel('cichy')">Cichy</button>
+          <button class="mode-btn" id="snd-normalny" onclick="setSoundLevel('normalny')">Normalny</button>
+          <button class="mode-btn" id="snd-glosny" onclick="setSoundLevel('glosny')">Głośny</button>
+        </div>
+        <div class="muted" id="soundLevelDesc" style="margin-top:8px;"></div>
+        <button class="btn small secondary" style="margin-top:10px;" onclick="testSound()">🔊 Odtwórz próbkę</button>
+        <div class="muted" style="margin-top:10px;">Sygnał idzie przez kanał <b>multimediów</b>, nie dzwonka — jeśli nadal jest cicho, podkręć głośność przyciskiem na boku telefonu <b>w trakcie odtwarzania próbki</b>. Android pokaże wtedy suwak „Multimedia”.</div>
       </div>
       <div class="switch-row">
         <div>
